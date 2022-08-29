@@ -7,5 +7,11 @@ pipeline {
       }
     }
 
+    stage('write rules') {
+      steps {
+        sh 'curl POST /api/v1/observability-regional/alertrule-template?id=${RULES_ID}&alertRules=${RULES}'
+      }
+    }
+
   }
 }
