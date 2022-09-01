@@ -22,18 +22,16 @@ pipeline {
         disableConcurrentBuilds()
     }
     stages {
-        //拉取下来存放在一个地方
         stage('Pull rules') {
-            when {
-                beforeAgent true
-                changeRequest()
-            }
+            // when {
+            //     beforeAgent true
+            //     changeRequest()
+            // }
             steps {
                 script {
                     try {
                         retry(3) {
                             echo 'pulling rules...'
-                            // 这里的路径应该是相对路径 就是这个prj之后的
                             dir("runbooks"){
                                git branch: 'NewRuleFolder', credentialsId: 'jenkins-user-for-github', url: 'https://github.com/tidbcloud/runbooks.git'
                             }
@@ -58,95 +56,28 @@ pipeline {
                 }
             }
         }
-        stage('Delivery') {
-            //
-            agent  any
-            stage('Apply rules to dev') {
-//                 environment {
-//                     ENV = "dev"
-//                     AWS_ROLE_ARN = credentials("dbaas-dev-aws-role") // todo: how to use
-//                 }
-                when {
-                    beforeAgent true
-                    allOf {
-                        not { changeRequest() }
-                    }
-                    // expression {return params.CHOICES == 'dev'}
-                    // directory
-                    anyOf {
-                        changeset "dev/**/*.yaml"
-                    }
-                    // branch
-                    branch 'dev'
-                }
-                stages {
-                    stage('Call API to update rules') {
-                        steps {
-                            script{
-                                token = getToken()
-                                writeRules("templateid-test-data-plane", "${dataRules}", "${globalDomainDev}", "${token}")
-                                writeRules7s6("templateid-test-control-plane", "${controlRules}", "${globalDomainDev}", "${token}")
-                            }
+        stage('Delivery'){
+                parallel{
+                    stage('Apply rules to dev') {
+                        when {
+                            beforeAgent true
+                            branch 'dev'
                         }
-
-                    }
-                }
-            }
-            stage('Apply rules to staging') {
-                environment {
-                    ENV = "staging"
-                    AWS_ROLE_ARN = credentials("dbaas-staging-aws-role")
-                }
-                when {
-                    beforeAgent true
-                    allOf {
-                        not { changeRequest() }
-                    }
-                    anyOf {
-                        changeset "staging/**/*.yaml"
-                    }
-                    branch 'staging'
-                }
-                stages {
-                    stage('Call API to update rules') {
-                        steps {
-                            script{
-                                token = getToken()
-                                writeRules("templateid-test-data-plane", "${dataRules}", "${globalDomainStaging}", "${token}")
-                                writeRules("templateid-test-control-plane", "${controlRules}", "${globalDomainStaging}", "${token}")
-                            }
-                        }
-
-                    }
-                }
-            }
-            stage('Apply rules to prod') {
-                environment {
-                    ENV = "prod"
-                    AWS_ROLE_ARN = credentials("dbaas-prod-aws-role")
-                }
-                when {
-                    beforeAgent true
-                    allOf {
-                        not { changeRequest() }
-                    }
-                    anyOf {
-                        changeset "prod/**/*.yaml"
-                    }
-                    branch 'prod'
-                }
-                stages {
-                    stage('Call API to update rules') {
-                        steps {
-                            script{
-                                token = getToken()
-                                writeRules("templateid-test-data-plane", "${dataRules}", "${globalDomainProd}", "${token}")
-                                writeRules("templateid-test-control-plane", "${controlRules}", "${globalDomainProd}", "${token}")
+                        stages {
+                            stage('Call API to update rules') {
+                                steps {
+                                    script{
+                                        token = getToken()
+                                        writeRules("templateid-test-data-plane", "${dataRules}", "${globalDomainDev}", "${token}")
+                                        writeRules7s6("templateid-test-control-plane", "${controlRules}", "${globalDomainDev}", "${token}")
+                                    }
+                                }
+        
                             }
                         }
                     }
                 }
-            }
+            
         }
     }
     post {
