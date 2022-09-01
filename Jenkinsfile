@@ -15,6 +15,9 @@ def globalDomainDev = 'k8s-observab-globalin-22824fa614-584301555.us-west-2.elb.
 def globalDomainStaging = 'www.gs.us-west-2.aws.observability-staging.pingcap.cloud/'
 def globalDomainProd = 'www.gs.us-west-2.aws.observability.tidbcloud.com'
 
+def dataPlaneRulesID = '95072d4e-5676-4084-bdf1-09aca85881f2'
+def controlPlaneRulesID = 'd5025c09-d861-417c-9cfe-797bd97ce0c3'
+
 pipeline {
     agent any
 
@@ -23,10 +26,10 @@ pipeline {
     }
     stages {
         stage('Pull rules') {
-            // when {
-            //     beforeAgent true
-            //     changeRequest()
-            // }
+            when {
+                beforeAgent true
+                changeRequest()
+            }
             steps {
                 script {
                     try {
@@ -36,67 +39,92 @@ pipeline {
                                git branch: 'NewRuleFolder', credentialsId: 'jenkins-user-for-github', url: 'https://github.com/tidbcloud/runbooks.git'
                             }
                         }
-                    } catch (Exception e) {
-                        println e
-                    }
-                }
-            }
-        }
-        stage('Read yaml file'){
-            steps{
-                script{
-                    try {
-                        retry(3) {
-                            getDataRules(dataPath)
-                            getControlRules(controlPath)
-                        }
                     } catch (err) {
                         echo "Failed: ${err}"
                     }
                 }
             }
         }
-        stage('Delivery'){
-            parallel{
-                stage('Apply rules to dev') {
+        stage('Read yaml file'){
+            stages {
+                stage('read dev rules') {
                     when {
-                        beforeAgent true
-                        branch 'dev'
+                        changeset "test/rules/**" // "newrules/dev/tidb-cloud/**"
                     }
                     stages {
-                        stage('Call API to update rules') {
+                        stage('read data-plane rules') {
+                            when {
+                                changeset "test/rules/data-plane/**" //"newrules/dev/tidb-cloud/data-plane/data-platform/**"
+                            }
+                            steps{
+                                script{
+                                    getDataRules(dataPath)
+                                }
+                            }
+                        }
+                        stage('read data-plane rules') {
+                            when {
+                                changeset "test/rules/control-plane/**" //"newrules/dev/tidb-cloud/control-plane/cloud-platform/**"
+                            }
+                            steps{
+                                script{
+                                    getControlRules(controlPath)
+                                }
+                            }
+                        }
+                    }
+                }
+                stage('read staging rules') {
+                    steps{
+                        echo 'read staging rules'
+                    }
+                }
+                stage('read prod rules') {
+                    steps{
+                        echo 'read prod rules'
+                    }
+                }
+            }
+        }
+        stage('Delivery'){
+            stages {
+                stage('Apply rules to dev') {
+                    when {
+                        changeset "test/rules/data-plane/**" // "newrules/dev/tidb-cloud/**"
+                    }
+                    stages {
+                        stage('Call API to update data-plane rules') {
+                            when {
+                                changeset "test/rules/data-plane/**" // "newrules/dev/tidb-cloud/data-plane/data-platform/**"
+                            }
                             steps {
                                 script{
                                     token = getToken()
-                                    writeRules("templateid-test-data-plane", "${dataRules}", "${globalDomainDev}", "${token}")
-                                    writeRules("templateid-test-control-plane", "${controlRules}", "${globalDomainDev}", "${token}")
+                                    writeRules("${dataPlaneRulesID}", "${dataRules}", "${globalDomainDev}", "${token}")
                                 }
                             }
-
+                        }
+                        stage('Call API to update control-plane rules') {
+                            when {
+                                changeset "test/rules/control-plane/**" // "newrules/dev/tidb-cloud/control-plane/cloud-platform/**"
+                            }
+                            steps {
+                                script{
+                                    token = getToken()
+                                    writeRules("${controlPlaneRulesID}", "${controlRules}", "${globalDomainDev}", "${token}")
+                                }
+                            }
                         }
                     }
                 }
-                stage('test pr') {
-                    when {
-                        beforeAgent true
-                        changeRequest()
-                    }
-                    steps {
-                        script{
-                            echo 'pull request'
-                        }
+                stage('Apply rules to staging') {
+                    steps{
+                        echo 'Apply rules to staging'
                     }
                 }
-                stage('test pr and branch') {
-                    when {
-                        beforeAgent true
-                        changeRequest()
-                        branch 'dev'
-                    }
-                    steps {
-                        script{
-                            echo 'pull request in dev'
-                        }
+                stage('Apply rules to prod') {
+                   steps{
+                        echo 'Apply rules to prod'
                     }
                 }
             }
