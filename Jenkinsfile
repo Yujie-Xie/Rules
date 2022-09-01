@@ -1,16 +1,19 @@
-
 #!groovy
 
 import groovy.transform.Field
 import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 
 @Field
 def dataRules = ""
 @Field
 def controlRules = ""
 
-def dataPath = 'newrules/tidb-cloud/data-plane/data-platform/'
-def controlPath = 'newrules/tidb-cloud/control-plane/cloud-platform/'
+def dataPath = 'runbooks/newrules/tidb-cloud/data-plane/data-platform/'
+def controlPath = 'runbooks/newrules/tidb-cloud/control-plane/cloud-platform/'
+def globalDomainDev = 'k8s-observab-globalin-22824fa614-584301555.us-west-2.elb.amazonaws.com'
+def globalDomainStaging = 'www.gs.us-west-2.aws.observability-staging.pingcap.cloud/'
+def globalDomainProd = 'www.gs.us-west-2.aws.observability.tidbcloud.com'
 
 pipeline {
     agent any
@@ -34,9 +37,9 @@ pipeline {
                         retry(3) {
                             echo 'pulling rules...'
                             // 这里的路径应该是相对路径 就是这个prj之后的
-//                             dir("runbooks"){
+                            dir("runbooks"){
                                git branch: 'NewRuleFolder', credentialsId: 'jenkins-user-for-github', url: 'https://github.com/tidbcloud/runbooks.git'
-//                             }
+                            }
                         }
                     } catch (Exception e) {
                         println e
@@ -58,20 +61,8 @@ pipeline {
                 }
             }
         }
-        stage("echo") {
-            steps{
-                script{
-                    // token = getToken()
-                    // writeRules("templateid-test-data-plane", "${dataRules}")
-                    // writeRules("templateid-test-control-plane", "${controlRules}")
-
-                    echo dataRules
-                    echo '----------------------------'
-                    echo controlRules
-                }
-            }
-        }
         stage('Delivery') {
+            //
             agent {
                 kubernetes {
                     defaultContainer "main"
@@ -80,23 +71,29 @@ pipeline {
             }
             stage('Apply rules to dev') {
                 environment {
-                    ENV = "dev" //获取当前分支或当前更新的文件
-                    AWS_ROLE_ARN = credentials("dbaas-dev-aws-role") // todo: change the arn
+                    ENV = "dev"
+                    AWS_ROLE_ARN = credentials("dbaas-dev-aws-role") // todo: how to use
                 }
                 when {
                     beforeAgent true
                     allOf {
                         not { changeRequest() }
                     }
-                    expression {return params.CHOICES == 'dev'}
+                    // expression {return params.CHOICES == 'dev'}
+                    // directory
+                    anyOf {
+                        changeset "dev/**/*.yaml"
+                    }
+                    // branch
+                    branch 'dev'
                 }
                 stages {
                     stage('Call API to update rules') {
                         steps {
                             script{
-                                // token = getToken()
-                                writeRules("templateid-test-data-plane", "${dataRules}")
-                                writeRules("templateid-test-control-plane", "${controlRules}")
+                                token = getToken()
+                                writeRules("templateid-test-data-plane", "${dataRules}", "${globalDomainDev}", "${token}")
+                                writeRules7s6("templateid-test-control-plane", "${controlRules}", "${globalDomainDev}", "${token}")
                             }
                         }
 
@@ -105,23 +102,26 @@ pipeline {
             }
             stage('Apply rules to staging') {
                 environment {
-                    ENV = "staging" //获取当前分支或当前更新的文件
-                    AWS_ROLE_ARN = credentials("dbaas-staging-aws-role") // todo: change the arn
+                    ENV = "staging"
+                    AWS_ROLE_ARN = credentials("dbaas-staging-aws-role")
                 }
                 when {
                     beforeAgent true
                     allOf {
                         not { changeRequest() }
                     }
-                    expression {return params.CHOICES == 'staging'}
+                    anyOf {
+                        changeset "staging/**/*.yaml"
+                    }
+                    branch 'staging'
                 }
                 stages {
                     stage('Call API to update rules') {
                         steps {
                             script{
-                                // token = getToken()
-                                // writeRules("templateid-test-data-plane", "${dataRules}")
-                                // writeRules("templateid-test-control-plane", "${controlRules}")
+                                token = getToken()
+                                writeRules("templateid-test-data-plane", "${dataRules}", "${globalDomainStaging}", "${token}")
+                                writeRules("templateid-test-control-plane", "${controlRules}", "${globalDomainStaging}", "${token}")
                             }
                         }
 
@@ -130,23 +130,26 @@ pipeline {
             }
             stage('Apply rules to prod') {
                 environment {
-                    ENV = "prod" //获取当前分支或当前更新的文件
-                    AWS_ROLE_ARN = credentials("dbaas-prod-aws-role") // todo: change the arn
+                    ENV = "prod"
+                    AWS_ROLE_ARN = credentials("dbaas-prod-aws-role")
                 }
                 when {
                     beforeAgent true
                     allOf {
                         not { changeRequest() }
                     }
-                    expression {return params.CHOICES == 'prod'}
+                    anyOf {
+                        changeset "prod/**/*.yaml"
+                    }
+                    branch 'prod'
                 }
                 stages {
                     stage('Call API to update rules') {
                         steps {
                             script{
-                                // token = getToken()
-                                // writeRules("templateid-test-data-plane", "${dataRules}")
-                                // writeRules("templateid-test-control-plane", "${controlRules}")
+                                token = getToken()
+                                writeRules("templateid-test-data-plane", "${dataRules}", "${globalDomainProd}", "${token}")
+                                writeRules("templateid-test-control-plane", "${controlRules}", "${globalDomainProd}", "${token}")
                             }
                         }
                     }
@@ -200,22 +203,29 @@ def getControlRules(PATH) {
     controlRules = "{\"groups\":[${controlRules.substring(0, controlRules.length()-1)}]}"
 }
 
-
 def getToken() {
     def response = sh returnStdout: true, script: """
     curl --location --request POST 'https://tidb-soc2.us.auth0.com/oauth/token' \
     --header 'content-type: application/x-www-form-urlencoded' \
     --header 'Cookie: did=s%3Av0%3A0084f670-2208-11ed-b5a3-734d8378f485.gHmjM9dSvukwVpPO0K7JerA3DuKat3Jp4QjL3VQVYaE; did_compat=s%3Av0%3A0084f670-2208-11ed-b5a3-734d8378f485.gHmjM9dSvukwVpPO0K7JerA3DuKat3Jp4QjL3VQVYaE' \
-    --data-raw ''
+    --data-urlencode 'grant_type=client_credentials' \
+    --data-urlencode 'client_id=Sd4aekPCa5nMUSQBIvf8eGSL895WtV4o' \
+    --data-urlencode 'client_secret=-SLP5UvxJdwGbVaKupxgv53T6otXguApPoG0fBsWCIqDG8_TuvlYnlkhPQHcWaKT' \
+    --data-urlencode 'audience=https://tidb-soc2.us.auth0.com/api/v2/'
     """
-    echo response
-    return response
+    def jsonSlurper = new JsonSlurper()
+    def object = jsonSlurper.parseText(response)
+
+    echo "${object}"
+    echo object.access_token
+    return object.access_token
 }
 
-def writeRules(RULES_ID, RULES) {
+
+def writeRules(RULES_ID, RULES, DOMAIN, TOKEN) {
     sh """
-    curl --location --request POST 'http://k8s-observab-globalin-22824fa614-584301555.us-west-2.elb.amazonaws.com/api/v1/alertrule-template' \
-    --header 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjZ6Zng2YUh6dlVhUTVaV3hZbVJxRiJ9.eyJpc3MiOiJodHRwczovL3RpZGItc29jMi51cy5hdXRoMC5jb20vIiwic3ViIjoiU2Q0YWVrUENhNW5NVVNRQkl2ZjhlR1NMODk1V3RWNG9AY2xpZW50cyIsImF1ZCI6Imh0dHBzOi8vdGlkYi1zb2MyLnVzLmF1dGgwLmNvbS9hcGkvdjIvIiwiaWF0IjoxNjYxOTI3MzU4LCJleHAiOjE2NjIwMTM3NTgsImF6cCI6IlNkNGFla1BDYTVuTVVTUUJJdmY4ZUdTTDg5NVd0VjRvIiwic2NvcGUiOiJyZWFkOmNsaWVudF9ncmFudHMiLCJndHkiOiJjbGllbnQtY3JlZGVudGlhbHMifQ.bVXkgPltnQpUR30b_uFRrUB4xekQOBafisij23VysG0KE39l7jmHUPu_XQtrcuJvcLD9RqOuqBeeDNMv50l6gFwJVe_5m6vBYxKaFNkcawOz6UsDai7R1043BmtEuatCLDf4QmshJU8ALnQwv1dAQWnWyOVZkfpgRaJ3dZamoTbZswkLAPp31bx9ELZLb_f2EhA2l4KeUeUNtOkspdpDiacIegKA8hWahwX1skf7xxAXus7AS46KK_P6D_3LjhaLtf-BylGg0t5IFUXCPhWaPXLX134Sy3nDIR3ZF3RFJedOd08wg3igy1WmCnAjvJ9PUS5D5Ucsi1VlwlyJks2LvA' \
+    curl --location --request POST 'http://${DOMAIN}/api/v1/alertrule-template' \
+    --header 'Authorization: Bearer ${TOKEN}' \
     --header 'Content-Type: application/json' \
     --data-raw '{
         "vendor": "aws",
@@ -225,6 +235,4 @@ def writeRules(RULES_ID, RULES) {
     }'
     """
 }
-
-
 
