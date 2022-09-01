@@ -2,6 +2,7 @@ groups:
   - name: account
     rules:
         # account server alert
+        # test for control-plane
       - alert: account_severDown
         annotations:
           description: 'account server down alert.'
