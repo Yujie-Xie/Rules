@@ -1,0 +1,12 @@
+groups:
+- name: billing2
+  rules:
+  - alert: BillingDown
+    annotations:
+      message: Billing has disappeared from Prometheus target discovery.
+    expr: |
+      absent(up{job="billing2"} == 1)
+    for: 10m
+    labels:
+      severity: critical
+      component: billing-server
