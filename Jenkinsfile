@@ -17,9 +17,6 @@ def globalDomainProd = 'www.gs.us-west-2.aws.observability.tidbcloud.com'
 
 pipeline {
     agent any
-    parameters {
-        choice(name:'CHOICES', choices:['dev','staging','prod'], defaultValue:"dev", description:'please choose the environment')
-    }
 
     options {
         disableConcurrentBuilds()
@@ -63,17 +60,12 @@ pipeline {
         }
         stage('Delivery') {
             //
-            agent {
-                kubernetes {
-                    defaultContainer "main"
-                    customWorkspace "/home/jenkins/agent/workspace/go/src/github.com/tidbcloud/runbooks"
-                }
-            }
+            agent  any
             stage('Apply rules to dev') {
-                environment {
-                    ENV = "dev"
-                    AWS_ROLE_ARN = credentials("dbaas-dev-aws-role") // todo: how to use
-                }
+//                 environment {
+//                     ENV = "dev"
+//                     AWS_ROLE_ARN = credentials("dbaas-dev-aws-role") // todo: how to use
+//                 }
                 when {
                     beforeAgent true
                     allOf {
