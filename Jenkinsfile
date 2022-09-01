@@ -25,7 +25,7 @@ pipeline {
         stage('Pull rules') {
             when {
                 beforeAgent true
-                // changeRequest()
+                changeRequest()
             }
             steps {
                 script {
