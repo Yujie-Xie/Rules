@@ -69,7 +69,7 @@ pipeline {
                                     script{
                                         token = getToken()
                                         writeRules("templateid-test-data-plane", "${dataRules}", "${globalDomainDev}", "${token}")
-                                        writeRules7s6("templateid-test-control-plane", "${controlRules}", "${globalDomainDev}", "${token}")
+                                        writeRules("templateid-test-control-plane", "${controlRules}", "${globalDomainDev}", "${token}")
                                     }
                                 }
 
