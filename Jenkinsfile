@@ -62,7 +62,7 @@ pipeline {
                                 }
                             }
                         }
-                        stage('read data-plane rules') {
+                        stage('read control-plane rules') {
                             when {
                                 changeset "test/rules/control-plane/**" //"newrules/dev/tidb-cloud/control-plane/cloud-platform/**"
                             }
