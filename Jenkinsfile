@@ -23,10 +23,10 @@ pipeline {
     }
     stages {
         stage('Pull rules') {
-            // when {
-            //     beforeAgent true
-            //     changeRequest()
-            // }
+            when {
+                beforeAgent true
+                // changeRequest()
+            }
             steps {
                 script {
                     try {
