@@ -59,8 +59,6 @@ pipeline {
             }
         }
         stage('Delivery') {
-            //
-            agent  any
             stage('Apply rules to dev') {
 //                 environment {
 //                     ENV = "dev"
