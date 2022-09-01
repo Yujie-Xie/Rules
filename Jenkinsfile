@@ -180,7 +180,6 @@ def getToken() {
     def response = sh returnStdout: true, script: """
     curl --location --request POST 'https://tidb-soc2.us.auth0.com/oauth/token' \
     --header 'content-type: application/x-www-form-urlencoded' \
-    --header 'Cookie: did=s%3Av0%3A0084f670-2208-11ed-b5a3-734d8378f485.gHmjM9dSvukwVpPO0K7JerA3DuKat3Jp4QjL3VQVYaE; did_compat=s%3Av0%3A0084f670-2208-11ed-b5a3-734d8378f485.gHmjM9dSvukwVpPO0K7JerA3DuKat3Jp4QjL3VQVYaE' \
     --data-urlencode 'grant_type=client_credentials' \
     --data-urlencode 'client_id=Sd4aekPCa5nMUSQBIvf8eGSL895WtV4o' \
     --data-urlencode 'client_secret=-SLP5UvxJdwGbVaKupxgv53T6otXguApPoG0fBsWCIqDG8_TuvlYnlkhPQHcWaKT' \
