@@ -57,27 +57,49 @@ pipeline {
             }
         }
         stage('Delivery'){
-                parallel{
-                    stage('Apply rules to dev') {
-                        when {
-                            beforeAgent true
-                            branch 'dev'
-                        }
-                        stages {
-                            stage('Call API to update rules') {
-                                steps {
-                                    script{
-                                        token = getToken()
-                                        writeRules("templateid-test-data-plane", "${dataRules}", "${globalDomainDev}", "${token}")
-                                        writeRules("templateid-test-control-plane", "${controlRules}", "${globalDomainDev}", "${token}")
-                                    }
+            parallel{
+                stage('Apply rules to dev') {
+                    when {
+                        beforeAgent true
+                        branch 'dev'
+                    }
+                    stages {
+                        stage('Call API to update rules') {
+                            steps {
+                                script{
+                                    token = getToken()
+                                    writeRules("templateid-test-data-plane", "${dataRules}", "${globalDomainDev}", "${token}")
+                                    writeRules("templateid-test-control-plane", "${controlRules}", "${globalDomainDev}", "${token}")
                                 }
-
                             }
+
                         }
                     }
                 }
-
+                stage('test pr') {
+                    when {
+                        beforeAgent true
+                        changeRequest
+                    }
+                    steps {
+                        script{
+                            echo 'pull request'
+                        }
+                    }
+                }
+                stage('test pr and branch') {
+                    when {
+                        beforeAgent true
+                        changeRequest
+                        branch dev
+                    }
+                    steps {
+                        script{
+                            echo 'pull request in dev'
+                        }
+                    }
+                }
+            }
         }
     }
     post {
