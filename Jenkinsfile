@@ -49,12 +49,12 @@ pipeline {
             stages {
                 stage('read dev rules') {
                     when {
-                        changeset "test/rules/**" // "newrules/dev/tidb-cloud/**"
+                        changeset "test/**" // "newrules/dev/tidb-cloud/**"
                     }
                     stages {
                         stage('read data-plane rules') {
                             when {
-                                changeset "test/rules/data-plane/**" //"newrules/dev/tidb-cloud/data-plane/data-platform/**"
+                                changeset "test/data-plane/**" //"newrules/dev/tidb-cloud/data-plane/data-platform/**"
                             }
                             steps{
                                 script{
@@ -64,7 +64,7 @@ pipeline {
                         }
                         stage('read control-plane rules') {
                             when {
-                                changeset "test/rules/control-plane/**" //"newrules/dev/tidb-cloud/control-plane/cloud-platform/**"
+                                changeset "test/control-plane/**" //"newrules/dev/tidb-cloud/control-plane/cloud-platform/**"
                             }
                             steps{
                                 script{
@@ -90,12 +90,12 @@ pipeline {
             stages {
                 stage('Apply rules to dev') {
                     when {
-                        changeset "test/rules/data-plane/**" // "newrules/dev/tidb-cloud/**"
+                        changeset "test/data-plane/**" // "newrules/dev/tidb-cloud/**"
                     }
                     stages {
                         stage('Call API to update data-plane rules') {
                             when {
-                                changeset "test/rules/data-plane/**" // "newrules/dev/tidb-cloud/data-plane/data-platform/**"
+                                changeset "test/data-plane/**" // "newrules/dev/tidb-cloud/data-plane/data-platform/**"
                             }
                             steps {
                                 script{
@@ -106,7 +106,7 @@ pipeline {
                         }
                         stage('Call API to update control-plane rules') {
                             when {
-                                changeset "test/rules/control-plane/**" // "newrules/dev/tidb-cloud/control-plane/cloud-platform/**"
+                                changeset "test/control-plane/**" // "newrules/dev/tidb-cloud/control-plane/cloud-platform/**"
                             }
                             steps {
                                 script{
