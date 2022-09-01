@@ -79,7 +79,7 @@ pipeline {
                 stage('test pr') {
                     when {
                         beforeAgent true
-                        changeRequest
+                        changeRequest()
                     }
                     steps {
                         script{
@@ -90,8 +90,8 @@ pipeline {
                 stage('test pr and branch') {
                     when {
                         beforeAgent true
-                        changeRequest
-                        branch dev
+                        changeRequest()
+                        branch 'dev'
                     }
                     steps {
                         script{
