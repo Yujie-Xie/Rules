@@ -28,7 +28,8 @@ pipeline {
         stage('Pull rules') {
             when {
                 beforeAgent true
-                changeRequest()
+                not { changeRequest() }
+                changeset 
             }
             steps {
                 script {
@@ -50,6 +51,7 @@ pipeline {
                 stage('read dev rules') {
                     when {
                         changeset "test/**" // "newrules/dev/tidb-cloud/**"
+                        not { changeRequest() }
                     }
                     stages {
                         stage('read data-plane rules') {
