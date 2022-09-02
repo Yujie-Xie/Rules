@@ -2,6 +2,7 @@ groups:
 - name: backup-restore
   rules:
   # for all cluster except cloudchat cluster
+  # test for data-plane
   - alert: TiDBClusterBackupDurationTooLong
     annotations:
       message: The TiDB Cluster {{ $labels.tenant_name }}/{{ $labels.cluster_name }} backup running duration more than 12h
